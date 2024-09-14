@@ -1,11 +1,14 @@
 //! "National Language Support", e.g. code page conversions.
 
-use crate::{winapi::stack_args::ArrayWithSizeMut, Machine};
+use crate::{
+    winapi::{kernel32::set_last_error, stack_args::ArrayWithSizeMut},
+    Machine, ERROR,
+};
 use bitflags::bitflags;
 use memory::Extensions;
 
 /// Code pages
-#[derive(Debug, win32_derive::TryFromEnum)]
+#[derive(Debug, PartialEq, Eq, win32_derive::TryFromEnum)]
 pub enum CP {
     /// The system default Windows ANSI code page.
     ACP = 0,
@@ -124,13 +127,23 @@ pub fn WideCharToMultiByte(
     cbMultiByte: i32,
     lpUsedDefaultChar: Option<&mut u32>,
 ) -> u32 {
-    match CodePage {
+    let code_page = match CodePage {
         Err(value) => unimplemented!("WideCharToMultiByte code page {value}"),
-        _ => {} // treat all others as ansi for now
-    }
-    dwFlags.unwrap();
+        Ok(cp) => cp,
+    };
 
-    0
+    let flags = match dwFlags {
+        Err(value) => unimplemented!("WideCharToMultiByte flags {value}"),
+        Ok(flags) => flags,
+    };
+
+    if code_page == CP::ACP && !flags.is_empty() {
+        set_last_error(machine, ERROR::INVALID_FLAGS);
+        return 0;
+    }
+
+    todo!("WideCharToMultiByte: dwFlags={:?} lpWideCharStr={:?} cchWideChar={} lpMultiByteStr={:x} cbMultiByte={} lpUsedDefaultChar={:?}",
+        dwFlags, lpWideCharStr, cchWideChar, lpMultiByteStr, cbMultiByte, lpUsedDefaultChar);
 }
 
 #[win32_derive::dllexport]

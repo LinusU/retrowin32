@@ -15,6 +15,7 @@ pub enum ERROR {
     OPEN_FAILED = 110,
     MOD_NOT_FOUND = 126,
     ALREADY_EXISTS = 183,
+    INVALID_FLAGS = 1004,
 }
 
 impl From<std::io::Error> for ERROR {
