@@ -372,7 +372,7 @@ pub fn SetFilePointer(
         lDistanceToMove |= (**high as i64) << 32;
     }
     let Some(file) = machine.state.kernel32.files.get_mut(hFile) else {
-        log::debug!("SetFilePointer({hFile:?}) unknown handle");
+        log::warn!("SetFilePointer({hFile:?}) unknown handle");
         set_last_error(machine, ERROR::INVALID_HANDLE);
         return u32::MAX;
     };

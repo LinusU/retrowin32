@@ -275,6 +275,7 @@ pub fn FormatMessageW(
 
 #[win32_derive::dllexport]
 pub fn CloseHandle(machine: &mut Machine, hObject: HFILE) -> bool {
+    return true; // FIXME: remove this line
     if machine.state.kernel32.files.remove(hObject).is_none() {
         log::debug!("CloseHandle({hObject:?}): unknown handle");
         set_last_error(machine, ERROR::INVALID_HANDLE);
