@@ -109,9 +109,11 @@ macro_rules! hook {
 
 /// Install all Deimos Rising game-specific hooks
 pub fn install_hooks(machine: &mut Machine) {
+    hook!(machine, 0x004655e0, game::quicktime::initialize_qtml, stdcall, u32);
+    hook!(machine, 0x0046d140, game::quicktime::enter_movies, stdcall, ());
+    hook!(machine, 0x00465880, game::quicktime::open_a_default_component, stdcall, u32);
+    hook!(machine, 0x00465860, game::quicktime::close_component, stdcall, ());
+
     hook!(machine, 0x00463450, game::init::win95_allow_one_instance, cdecl, u32, u32);
-    hook!(machine, 0x004655e0, game::init::initialize_qtml, stdcall, u32);
-    hook!(machine, 0x0046d140, game::init::enter_movies, stdcall, ());
     hook!(machine, 0x00462fa0, game::init::get_directx_version, stdcall, u32);
-    hook!(machine, 0x00465880, game::init::open_a_default_component, stdcall, u32);
 }
