@@ -346,6 +346,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06ea2b9bc92be3c2baa9334a323ebca2d6f074ff852cd1d7b11064035cd3868f"
 
 [[package]]
+name = "deimos-rising"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "argh",
+ "chrono",
+ "log",
+ "memory",
+ "pe",
+ "sdl2",
+ "win32",
+ "win32-system",
+ "win32-winapi",
+ "x86",
+]
+
+[[package]]
 name = "extended"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -18,6 +18,11 @@ pub struct Emulator {
     /// Places where we've patched out the instruction with an int3.
     /// The map values are the bytes from before the breakpoint.
     breakpoints: HashMap<u32, u8>,
+
+    /// User-defined hooks that replace x86 code execution at specific addresses.
+    /// When execution reaches a hooked address, the callback is invoked.
+    /// If the callback returns true, execution continues from where the callback set EIP.
+    hooks: HashMap<u32, Box<dyn FnMut(&mut Machine) -> bool>>,
 }
 
 pub type Machine = MachineX<Emulator>;
@@ -32,6 +37,7 @@ impl MachineX<Emulator> {
                 x86: x86::X86::new(),
                 shims: Default::default(),
                 breakpoints: Default::default(),
+                hooks: Default::default(),
             },
             memory,
             host,
@@ -123,7 +129,26 @@ impl MachineX<Emulator> {
                 };
             }
             x86::CPUState::DebugBreak => {
-                self.emu.status = Status::DebugBreak;
+                // Check if this is a hook point
+                let eip = self.emu.x86.cpu().regs.eip;
+                if let Some(mut hook) = self.emu.hooks.remove(&eip) {
+                    // Call the hook (temporarily removed from map to satisfy borrow checker)
+                    let handled = hook(self);
+                    // Put the hook back
+                    self.emu.hooks.insert(eip, hook);
+
+                    if handled {
+                        // Hook handled it, continue execution
+                        self.emu.x86.cpu_mut().state = x86::CPUState::Running;
+                        self.emu.status = Status::Running;
+                    } else {
+                        // Hook didn't handle it, treat as debug break
+                        self.emu.status = Status::DebugBreak;
+                    }
+                } else {
+                    // Normal debug break (not a hook)
+                    self.emu.status = Status::DebugBreak;
+                }
             }
             state => unimplemented!("{state:?}"),
         }
@@ -269,6 +294,30 @@ impl MachineX<Emulator> {
                 false
             }
         }
+    }
+
+    /// Add a function hook that replaces execution at the given address.
+    /// When execution reaches this address, the hook callback will be invoked.
+    /// The callback receives a mutable reference to the Machine and should:
+    /// 1. Read arguments from the stack (ESP points to return address)
+    /// 2. Perform the hooked function's logic
+    /// 3. Set return value in EAX
+    /// 4. Adjust ESP to pop arguments (for stdcall)
+    /// 5. Set EIP to the return address
+    /// 6. Return true to indicate the hook handled execution
+    ///
+    /// This automatically adds a breakpoint at the address.
+    pub fn add_function_hook<F>(&mut self, addr: u32, hook: F)
+    where
+        F: FnMut(&mut Machine) -> bool + 'static,
+    {
+        log::debug!("Adding function hook at {:#x}", addr);
+
+        // Add a breakpoint at this address
+        self.add_breakpoint(addr);
+
+        // Register the hook callback
+        self.emu.hooks.insert(addr, Box::new(hook));
     }
 
     pub fn teb_addr(&self) -> u32 {

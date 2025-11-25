@@ -1,0 +1,19 @@
+[package]
+name = "deimos-rising"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0"
+argh = { version = "0.1.13", default-features = false, features = ["help"] }
+log = { workspace = true }
+chrono = { workspace = true }
+sdl2 = { version = "0.35.2", features = ["unsafe_textures"] }
+
+# Depend on retrowin32 workspace crates
+memory = { workspace = true }
+pe = { workspace = true }
+win32 = { workspace = true, features = ["x86-emu"] }
+win32-system = { workspace = true }
+win32-winapi = { workspace = true }
+x86 = { workspace = true }
