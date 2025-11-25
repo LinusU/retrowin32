@@ -1,7 +1,7 @@
 use crate::game;
+use memory::Extensions;
 use win32::Machine;
 use win32_winapi::calling_convention::FromStack;
-use memory::Extensions;
 use x86::Register;
 
 /// Ghidra's default base address for executables
@@ -20,7 +20,10 @@ pub fn translate_address(machine: &Machine, ghidra_addr: u32) -> u32 {
 
     log::debug!(
         "Address translation: Ghidra {:#x} -> Runtime {:#x} (base: {:#x}, offset: {:#x})",
-        ghidra_addr, runtime_addr, actual_base, offset
+        ghidra_addr,
+        runtime_addr,
+        actual_base,
+        offset
     );
 
     runtime_addr
@@ -31,7 +34,7 @@ macro_rules! hook {
 
     // stdcall with no arguments, void return
     ($machine:expr, $addr:expr, $func:path, stdcall, ()) => {{
-        let addr =  $crate::hooks::translate_address($machine, $addr);
+        let addr = $crate::hooks::translate_address($machine, $addr);
         log::info!("Installing hook at {:#x}", addr);
         $machine.add_function_hook(addr, |machine: &mut Machine| -> bool {
             let cpu = machine.emu.x86.cpu_mut();
@@ -54,7 +57,7 @@ macro_rules! hook {
 
     // stdcall with no arguments, returns u32
     ($machine:expr, $addr:expr, $func:path, stdcall, u32) => {{
-        let addr =  $crate::hooks::translate_address($machine, $addr);
+        let addr = $crate::hooks::translate_address($machine, $addr);
         log::info!("Installing hook at {:#x}", addr);
         $machine.add_function_hook(addr, |machine: &mut Machine| -> bool {
             let cpu = machine.emu.x86.cpu_mut();
@@ -82,7 +85,7 @@ macro_rules! hook {
 
     // cdecl with single string argument, returns void
     ($machine:expr, $addr:expr, $func:path, cdecl, (), Option<&str>, ...) => {{
-        let addr =  $crate::hooks::translate_address($machine, $addr);
+        let addr = $crate::hooks::translate_address($machine, $addr);
         log::info!("Installing hook at {:#x}", addr);
         $machine.add_function_hook(addr, |machine: &mut Machine| -> bool {
             let cpu = machine.emu.x86.cpu_mut();
@@ -107,7 +110,7 @@ macro_rules! hook {
 
     // cdecl with single argument, returns u32
     ($machine:expr, $addr:expr, $func:path, cdecl, u32, $arg_type:ty) => {{
-        let addr =  $crate::hooks::translate_address($machine, $addr);
+        let addr = $crate::hooks::translate_address($machine, $addr);
         log::info!("Installing hook at {:#x}", addr);
         $machine.add_function_hook(addr, |machine: &mut Machine| -> bool {
             let cpu = machine.emu.x86.cpu_mut();
@@ -134,6 +137,7 @@ macro_rules! hook {
 }
 
 /// Install all Deimos Rising game-specific hooks
+#[rustfmt::skip]
 pub fn install_hooks(machine: &mut Machine) {
     hook!(machine, 0x004655e0, game::quicktime::initialize_qtml, stdcall, u32);
     hook!(machine, 0x0046d140, game::quicktime::enter_movies, stdcall, ());
