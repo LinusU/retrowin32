@@ -1,5 +1,6 @@
 use crate::game;
 use win32::Machine;
+use win32_winapi::calling_convention::FromStack;
 use memory::Extensions;
 use x86::Register;
 
@@ -79,6 +80,31 @@ macro_rules! hook {
 
     // ==================== CDECL ======================
 
+    // cdecl with single string argument, returns void
+    ($machine:expr, $addr:expr, $func:path, cdecl, (), Option<&str>, ...) => {{
+        let addr =  $crate::hooks::translate_address($machine, $addr);
+        log::info!("Installing hook at {:#x}", addr);
+        $machine.add_function_hook(addr, |machine: &mut Machine| -> bool {
+            let cpu = machine.emu.x86.cpu_mut();
+            let mem = machine.memory.mem();
+            let esp = cpu.regs.get32(Register::ESP);
+            let return_addr = mem.get_pod::<u32>(esp);
+
+            let msg = <Option<&str>>::from_stack(mem, esp + 4);
+
+            // Call the Rust function
+            $func(msg, (mem, esp + 8));
+
+            // Clean up stack (cdecl: pop return address)
+            cpu.regs.set32(Register::ESP, esp + 4);
+
+            // Jump to return address
+            cpu.regs.eip = return_addr;
+
+            true
+        });
+    }};
+
     // cdecl with single argument, returns u32
     ($machine:expr, $addr:expr, $func:path, cdecl, u32, $arg_type:ty) => {{
         let addr =  $crate::hooks::translate_address($machine, $addr);
@@ -116,4 +142,6 @@ pub fn install_hooks(machine: &mut Machine) {
 
     hook!(machine, 0x00463450, game::init::win95_allow_one_instance, cdecl, u32, u32);
     hook!(machine, 0x00462fa0, game::init::get_directx_version, stdcall, u32);
+
+    hook!(machine, 0x00450610, game::app::app_log, cdecl, (), Option<&str>, ...);
 }
