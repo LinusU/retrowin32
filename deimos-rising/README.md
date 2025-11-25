@@ -20,13 +20,12 @@ cargo build -p deimos-rising --profile=lto
 ## Running
 
 ```bash
-cargo run -p deimos-rising --profile=lto -- path/to/DeimosRising.exe
+cargo run -p deimos-rising --profile=lto -- path/to/DeimosRisingInstallation/
 ```
 
 ### Command-line Options
 
 ```
-  -C, --chdir       change working directory before running
   --win32-trace     winapi systems to trace; see HACKING.md for docs
   --debug           enable debug logging
   --help, help      display usage information

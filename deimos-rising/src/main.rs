@@ -13,10 +13,6 @@ use win32::Machine;
 #[derive(argh::FromArgs, Debug)]
 /// Deimos Rising port runner
 struct Args {
-    /// change working directory before running
-    #[argh(option, short = 'C')]
-    chdir: Option<String>,
-
     /// winapi systems to trace; see HACKING.md for docs
     #[argh(option)]
     win32_trace: Option<String>,
@@ -25,22 +21,23 @@ struct Args {
     #[argh(switch)]
     debug: bool,
 
-    /// path to DeimosRising.exe
+    /// path to Deimos Rising folder
     #[argh(positional)]
-    exe_path: String,
+    game_path: String,
 }
 
 /// Convert a unix command line to a Windows form.
 fn command_line_to_windows(
     host: &dyn win32::host::Host,
-    exe_path: String,
+    game_path: String,
 ) -> anyhow::Result<String> {
     // Convert argument to full path to exe.
     let cwd = host
         .current_dir()
         .map_err(|e| anyhow!("failed to get current dir: {e:?}"))?;
     let mut full_path = cwd
-        .join(&exe_path)
+        .join(&game_path)
+        .join("DeimosRising.exe")
         .normalize()
         .to_str()
         .ok_or_else(|| anyhow!("invalid path"))?
@@ -77,6 +74,8 @@ fn escape_arg(arg: &mut String) {
 fn main() -> anyhow::Result<ExitCode> {
     let mut args: Args = argh::from_env();
 
+    std::env::set_current_dir(&args.game_path).unwrap();
+
     // Initialize logging
     logging::init(if args.debug {
         log::LevelFilter::Debug
@@ -84,14 +83,10 @@ fn main() -> anyhow::Result<ExitCode> {
         log::LevelFilter::Info
     });
 
-    if let Some(dir) = &args.chdir {
-        std::env::set_current_dir(dir).unwrap();
-    }
-
     win32::trace::set_scheme(args.win32_trace.as_deref().unwrap_or("-"));
 
     let host = host::new_host();
-    let cmdline = command_line_to_windows(&host, std::mem::take(&mut args.exe_path))?;
+    let cmdline = command_line_to_windows(&host, std::mem::take(&mut args.game_path))?;
     let mut machine = win32::Machine::new(Box::new(host));
 
     machine.set_audio(true);
