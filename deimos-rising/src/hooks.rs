@@ -28,6 +28,29 @@ pub fn translate_address(machine: &Machine, ghidra_addr: u32) -> u32 {
 macro_rules! hook {
     // ==================== STDCALL ====================
 
+    // stdcall with no arguments, void return
+    ($machine:expr, $addr:expr, $func:path, stdcall, ()) => {{
+        let addr =  $crate::hooks::translate_address($machine, $addr);
+        log::info!("Installing hook at {:#x}", addr);
+        $machine.add_function_hook(addr, |machine: &mut Machine| -> bool {
+            let cpu = machine.emu.x86.cpu_mut();
+            let mem = machine.memory.mem();
+            let esp = cpu.regs.get32(Register::ESP);
+            let return_addr = mem.get_pod::<u32>(esp);
+
+            // Call the Rust function
+            $func();
+
+            // Clean up stack (stdcall: pop return address, no args)
+            cpu.regs.set32(Register::ESP, esp.wrapping_add(4));
+
+            // Jump to return address
+            cpu.regs.eip = return_addr;
+
+            true
+        });
+    }};
+
     // stdcall with no arguments, returns u32
     ($machine:expr, $addr:expr, $func:path, stdcall, u32) => {{
         let addr =  $crate::hooks::translate_address($machine, $addr);
@@ -87,5 +110,8 @@ macro_rules! hook {
 /// Install all Deimos Rising game-specific hooks
 pub fn install_hooks(machine: &mut Machine) {
     hook!(machine, 0x00463450, game::init::win95_allow_one_instance, cdecl, u32, u32);
+    hook!(machine, 0x004655e0, game::init::initialize_qtml, stdcall, u32);
+    hook!(machine, 0x0046d140, game::init::enter_movies, stdcall, ());
     hook!(machine, 0x00462fa0, game::init::get_directx_version, stdcall, u32);
+    hook!(machine, 0x00465880, game::init::open_a_default_component, stdcall, u32);
 }
