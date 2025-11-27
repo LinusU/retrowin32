@@ -159,6 +159,8 @@ pub fn install_hooks(machine: &mut Machine) {
 
     hook!(machine, 0x00450610, game::app::app_log, cdecl, Option<&str>, ...);
 
+    hook!(machine, 0x0044d5f0, game::mem::clear, cdecl, Option<&mut [u8]>);
+
     fn pak_tag_get_info_from_file_name(name: Option<&str>, tag: Option<&mut game::pak::Tag>) -> bool {
         tag.unwrap().get_info_from_file_name(name.unwrap())
     }
