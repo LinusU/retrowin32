@@ -36,7 +36,7 @@ macro_rules! hook {
     ($machine:expr, $addr:expr, $func:path, stdcall, ()) => {{
         let addr = $crate::hooks::translate_address($machine, $addr);
         log::info!("Installing hook at {:#x}", addr);
-        $machine.add_function_hook(addr, |machine: &mut Machine| -> bool {
+        $machine.add_function_hook(addr, |machine: &mut Machine| {
             let cpu = machine.emu.x86.cpu_mut();
             let mem = machine.memory.mem();
             let esp = cpu.regs.get32(Register::ESP);
@@ -50,8 +50,6 @@ macro_rules! hook {
 
             // Jump to return address
             cpu.regs.eip = return_addr;
-
-            true
         });
     }};
 
@@ -59,7 +57,7 @@ macro_rules! hook {
     ($machine:expr, $addr:expr, $func:path, stdcall, u32) => {{
         let addr = $crate::hooks::translate_address($machine, $addr);
         log::info!("Installing hook at {:#x}", addr);
-        $machine.add_function_hook(addr, |machine: &mut Machine| -> bool {
+        $machine.add_function_hook(addr, |machine: &mut Machine| {
             let cpu = machine.emu.x86.cpu_mut();
             let mem = machine.memory.mem();
             let esp = cpu.regs.get32(Register::ESP);
@@ -76,8 +74,6 @@ macro_rules! hook {
 
             // Jump to return address
             cpu.regs.eip = return_addr;
-
-            true
         });
     }};
 
@@ -87,7 +83,7 @@ macro_rules! hook {
     ($machine:expr, $addr:expr, $func:path, cdecl, (), $arg1_type:ty, ...) => {{
         let addr = $crate::hooks::translate_address($machine, $addr);
         log::info!("Installing hook at {:#x}", addr);
-        $machine.add_function_hook(addr, |machine: &mut Machine| -> bool {
+        $machine.add_function_hook(addr, |machine: &mut Machine| {
             let cpu = machine.emu.x86.cpu_mut();
             let mem = machine.memory.mem();
             let esp = cpu.regs.get32(Register::ESP);
@@ -103,8 +99,6 @@ macro_rules! hook {
 
             // Jump to return address
             cpu.regs.eip = return_addr;
-
-            true
         });
     }};
 
@@ -112,7 +106,7 @@ macro_rules! hook {
     ($machine:expr, $addr:expr, $func:path, cdecl, $ret:ty, $arg1_type:ty) => {{
         let addr = $crate::hooks::translate_address($machine, $addr);
         log::info!("Installing hook at {:#x}", addr);
-        $machine.add_function_hook(addr, |machine: &mut Machine| -> bool {
+        $machine.add_function_hook(addr, |machine: &mut Machine| {
             let cpu = machine.emu.x86.cpu_mut();
             let mem = machine.memory.mem();
             let esp = cpu.regs.get32(Register::ESP);
@@ -131,8 +125,6 @@ macro_rules! hook {
 
             // Jump to return address
             cpu.regs.eip = return_addr;
-
-            true
         });
     }};
 
@@ -140,7 +132,7 @@ macro_rules! hook {
     ($machine:expr, $addr:expr, $func:path, cdecl, $ret:ty, $arg1_type:ty, $arg2_type:ty) => {{
         let addr = $crate::hooks::translate_address($machine, $addr);
         log::info!("Installing hook at {:#x}", addr);
-        $machine.add_function_hook(addr, |machine: &mut Machine| -> bool {
+        $machine.add_function_hook(addr, |machine: &mut Machine| {
             let cpu = machine.emu.x86.cpu_mut();
             let mem = machine.memory.mem();
             let esp = cpu.regs.get32(Register::ESP);
@@ -160,8 +152,6 @@ macro_rules! hook {
 
             // Jump to return address
             cpu.regs.eip = return_addr;
-
-            true
         });
     }};
 }
