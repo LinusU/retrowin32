@@ -1,7 +1,7 @@
 use crate::game;
 use memory::Extensions;
 use win32::Machine;
-use win32_winapi::calling_convention::FromStack;
+use win32_winapi::calling_convention::{ABIReturn, FromStack};
 use x86::Register;
 
 /// Ghidra's default base address for executables
@@ -32,8 +32,8 @@ pub fn translate_address(machine: &Machine, ghidra_addr: u32) -> u32 {
 macro_rules! hook {
     // ==================== STDCALL ====================
 
-    // stdcall with no arguments, void return
-    ($machine:expr, $addr:expr, $func:path, stdcall, ()) => {{
+    // stdcall with no arguments
+    ($machine:expr, $addr:expr, $func:path, stdcall) => {{
         let addr = $crate::hooks::translate_address($machine, $addr);
         log::info!("Installing hook at {:#x}", addr);
         $machine.add_function_hook(addr, |machine: &mut Machine| {
@@ -43,31 +43,12 @@ macro_rules! hook {
             let return_addr = mem.get_pod::<u32>(esp);
 
             // Call the Rust function
-            $func();
+            let return_value = $func();
 
-            // Clean up stack (stdcall: pop return address, no args)
-            cpu.regs.set32(Register::ESP, esp.wrapping_add(4));
-
-            // Jump to return address
-            cpu.regs.eip = return_addr;
-        });
-    }};
-
-    // stdcall with no arguments, returns u32
-    ($machine:expr, $addr:expr, $func:path, stdcall, u32) => {{
-        let addr = $crate::hooks::translate_address($machine, $addr);
-        log::info!("Installing hook at {:#x}", addr);
-        $machine.add_function_hook(addr, |machine: &mut Machine| {
-            let cpu = machine.emu.x86.cpu_mut();
-            let mem = machine.memory.mem();
-            let esp = cpu.regs.get32(Register::ESP);
-            let return_addr = mem.get_pod::<u32>(esp);
-
-            // Call the Rust function
-            let return_value: u32 = $func();
-
-            // Set return value in EAX
-            cpu.regs.set32(Register::EAX, return_value);
+            match ABIReturn::from(return_value) {
+                ABIReturn::U32(value) => cpu.regs.set32(Register::EAX, value),
+                _ => panic!("Unsupported return type"),
+            }
 
             // Clean up stack (stdcall: pop return address, no args)
             cpu.regs.set32(Register::ESP, esp + 4);
@@ -79,8 +60,8 @@ macro_rules! hook {
 
     // ==================== CDECL ======================
 
-    // cdecl with single + variadic argument, returns void
-    ($machine:expr, $addr:expr, $func:path, cdecl, (), $arg1_type:ty, ...) => {{
+    // cdecl with single + variadic argument
+    ($machine:expr, $addr:expr, $func:path, cdecl, $arg1_type:ty, ...) => {{
         let addr = $crate::hooks::translate_address($machine, $addr);
         log::info!("Installing hook at {:#x}", addr);
         $machine.add_function_hook(addr, |machine: &mut Machine| {
@@ -92,7 +73,12 @@ macro_rules! hook {
             let arg1 = <$arg1_type>::from_stack(mem, esp + 4);
 
             // Call the Rust function
-            $func(arg1, (mem, esp + 8));
+            let return_value = $func(arg1, (mem, esp + 8));
+
+            match ABIReturn::from(return_value) {
+                ABIReturn::U32(value) => cpu.regs.set32(Register::EAX, value),
+                _ => panic!("Unsupported return type"),
+            }
 
             // Clean up stack (cdecl: pop return address)
             cpu.regs.set32(Register::ESP, esp + 4);
@@ -102,8 +88,8 @@ macro_rules! hook {
         });
     }};
 
-    // cdecl with single argument, returns value
-    ($machine:expr, $addr:expr, $func:path, cdecl, $ret:ty, $arg1_type:ty) => {{
+    // cdecl with single argument
+    ($machine:expr, $addr:expr, $func:path, cdecl, $arg1_type:ty) => {{
         let addr = $crate::hooks::translate_address($machine, $addr);
         log::info!("Installing hook at {:#x}", addr);
         $machine.add_function_hook(addr, |machine: &mut Machine| {
@@ -115,10 +101,12 @@ macro_rules! hook {
             let arg1 = <$arg1_type>::from_stack(mem, esp + 4);
 
             // Call the Rust function
-            let return_value: $ret = $func(arg1);
+            let return_value = $func(arg1);
 
-            // Set return value in EAX
-            cpu.regs.set32(Register::EAX, return_value as u32);
+            match ABIReturn::from(return_value) {
+                ABIReturn::U32(value) => cpu.regs.set32(Register::EAX, value),
+                _ => panic!("Unsupported return type"),
+            }
 
             // Clean up stack (cdecl: pop return address)
             cpu.regs.set32(Register::ESP, esp + 4);
@@ -128,8 +116,8 @@ macro_rules! hook {
         });
     }};
 
-    // cdecl with two arguments, returns value
-    ($machine:expr, $addr:expr, $func:path, cdecl, $ret:ty, $arg1_type:ty, $arg2_type:ty) => {{
+    // cdecl with two arguments
+    ($machine:expr, $addr:expr, $func:path, cdecl, $arg1_type:ty, $arg2_type:ty) => {{
         let addr = $crate::hooks::translate_address($machine, $addr);
         log::info!("Installing hook at {:#x}", addr);
         $machine.add_function_hook(addr, |machine: &mut Machine| {
@@ -142,10 +130,12 @@ macro_rules! hook {
             let arg2 = <$arg2_type>::from_stack(mem, esp + 8);
 
             // Call the Rust function
-            let return_value: $ret = $func(arg1, arg2);
+            let return_value = $func(arg1, arg2);
 
-            // Set return value in EAX
-            cpu.regs.set32(Register::EAX, return_value as u32);
+            match ABIReturn::from(return_value) {
+                ABIReturn::U32(value) => cpu.regs.set32(Register::EAX, value),
+                _ => panic!("Unsupported return type"),
+            }
 
             // Clean up stack (cdecl: pop return address)
             cpu.regs.set32(Register::ESP, esp + 4);
@@ -159,18 +149,18 @@ macro_rules! hook {
 /// Install all Deimos Rising game-specific hooks
 #[rustfmt::skip]
 pub fn install_hooks(machine: &mut Machine) {
-    hook!(machine, 0x004655e0, game::quicktime::initialize_qtml, stdcall, u32);
-    hook!(machine, 0x0046d140, game::quicktime::enter_movies, stdcall, ());
-    hook!(machine, 0x00465880, game::quicktime::open_a_default_component, stdcall, u32);
-    hook!(machine, 0x00465860, game::quicktime::close_component, stdcall, ());
+    hook!(machine, 0x004655e0, game::quicktime::initialize_qtml, stdcall);
+    hook!(machine, 0x0046d140, game::quicktime::enter_movies, stdcall);
+    hook!(machine, 0x00465880, game::quicktime::open_a_default_component, stdcall);
+    hook!(machine, 0x00465860, game::quicktime::close_component, stdcall);
 
-    hook!(machine, 0x00463450, game::init::win95_allow_one_instance, cdecl, u32, u32);
-    hook!(machine, 0x00462fa0, game::init::get_directx_version, stdcall, u32);
+    hook!(machine, 0x00463450, game::init::win95_allow_one_instance, cdecl, u32);
+    hook!(machine, 0x00462fa0, game::init::get_directx_version, stdcall);
 
-    hook!(machine, 0x00450610, game::app::app_log, cdecl, (), Option<&str>, ...);
+    hook!(machine, 0x00450610, game::app::app_log, cdecl, Option<&str>, ...);
 
     fn pak_tag_get_info_from_file_name(name: Option<&str>, tag: Option<&mut game::pak::Tag>) -> bool {
         tag.unwrap().get_info_from_file_name(name.unwrap())
     }
-    hook!(machine, 0x004038b0, pak_tag_get_info_from_file_name, cdecl, bool, Option<&str>, Option<&mut game::pak::Tag>);
+    hook!(machine, 0x004038b0, pak_tag_get_info_from_file_name, cdecl, Option<&str>, Option<&mut game::pak::Tag>);
 }
