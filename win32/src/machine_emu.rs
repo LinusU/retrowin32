@@ -24,7 +24,7 @@ pub type Machine = MachineX<Emulator>;
 
 impl MachineX<Emulator> {
     pub fn new(host: Box<dyn host::Host>) -> Self {
-        let memory = Memory::new(MemImpl::new(256 << 20));
+        let memory = Memory::new(MemImpl::new(768 << 20));
 
         Machine {
             emu: Emulator {

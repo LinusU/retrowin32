@@ -204,11 +204,11 @@ impl Memory {
 
     pub fn create_process_heap(&mut self) {
         debug_assert!(self.process_heap.addr == 0);
-        // Default process heap size is 1MB.  It can be adjusted with linker flags, so we might
-        // need to revisit this.  Unfortunately currently we need a process heap in place before
-        // we load the exe.
-        let size = 1 << 20;
-        let heap = self.new_heap(size, "process heap".into());
+        let size = 512 << 20;
+        let addr = 256 << 20;
+        let mapping = self.mappings.add(Mapping { addr, size, module: None, desc: "process heap".into(), flags: pe::IMAGE_SCN::empty() });
+        let heap = Rc::new(Heap::new(mapping.addr, mapping.size));
+        self.heaps.insert(mapping.addr, heap.clone());
         self.process_heap = heap;
     }
 
