@@ -211,6 +211,21 @@ impl<'a, T: memory::Pod> FromStack<'a> for Option<&'a [T]> {
     }
 }
 
+impl<'a, T: memory::Pod> FromStack<'a> for Option<&'a mut [T]> {
+    fn from_stack(mem: Mem<'a>, sp: u32) -> Self {
+        let addr = mem.get_pod::<u32>(sp);
+        let count = mem.get_pod::<u32>(sp + 4);
+        if addr == 0 {
+            return None;
+        }
+        let slice = mem.sub32_mut(addr, count);
+        let ptr = slice.as_mut_ptr() as *mut T;
+        memory::check_aligned(ptr);
+        // Safety: Pod allows coercion from bytes.
+        Some(unsafe { std::slice::from_raw_parts_mut(slice.as_mut_ptr() as *mut _, count as usize) })
+    }
+}
+
 impl<'a> FromArg<'a> for Option<&'a str> {
     fn from_arg(mem: Mem<'a>, arg: u32) -> Self {
         if arg == 0 {
