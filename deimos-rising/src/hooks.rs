@@ -4,39 +4,13 @@ use win32::Machine;
 use win32_winapi::calling_convention::{ABIReturn, FromStack};
 use x86::Register;
 
-/// Ghidra's default base address for executables
-pub const GHIDRA_IMAGE_BASE: u32 = 0x00400000;
-
-/// Translate a Ghidra address to the actual runtime address
-///
-/// Ghidra shows addresses relative to the preferred base (usually 0x00400000),
-/// but the actual loaded address might be different. This function performs:
-/// runtime_addr = actual_base + (ghidra_addr - GHIDRA_IMAGE_BASE)
-pub fn translate_address(machine: &Machine, ghidra_addr: u32) -> u32 {
-    let state = win32::kernel32::get_state(machine);
-    let actual_base = state.image_base;
-    let offset = ghidra_addr.wrapping_sub(GHIDRA_IMAGE_BASE);
-    let runtime_addr = actual_base.wrapping_add(offset);
-
-    log::debug!(
-        "Address translation: Ghidra {:#x} -> Runtime {:#x} (base: {:#x}, offset: {:#x})",
-        ghidra_addr,
-        runtime_addr,
-        actual_base,
-        offset
-    );
-
-    runtime_addr
-}
-
 macro_rules! hook {
     // ==================== STDCALL ====================
 
     // stdcall with no arguments
     ($machine:expr, $addr:expr, $func:path, stdcall) => {{
-        let addr = $crate::hooks::translate_address($machine, $addr);
-        log::info!("Installing hook at {:#x}", addr);
-        $machine.add_function_hook(addr, |machine: &mut Machine| {
+        log::info!("Installing hook at {:#x}", $addr);
+        $machine.add_function_hook($addr, |machine: &mut Machine| {
             let cpu = machine.emu.x86.cpu_mut();
             let mem = machine.memory.mem();
             let esp = cpu.regs.get32(Register::ESP);
@@ -62,9 +36,8 @@ macro_rules! hook {
 
     // cdecl with single + variadic argument
     ($machine:expr, $addr:expr, $func:path, cdecl, $arg1_type:ty, ...) => {{
-        let addr = $crate::hooks::translate_address($machine, $addr);
-        log::info!("Installing hook at {:#x}", addr);
-        $machine.add_function_hook(addr, |machine: &mut Machine| {
+        log::info!("Installing hook at {:#x}", $addr);
+        $machine.add_function_hook($addr, |machine: &mut Machine| {
             let cpu = machine.emu.x86.cpu_mut();
             let mem = machine.memory.mem();
             let esp = cpu.regs.get32(Register::ESP);
@@ -90,9 +63,8 @@ macro_rules! hook {
 
     // cdecl with single argument
     ($machine:expr, $addr:expr, $func:path, cdecl, $arg1_type:ty) => {{
-        let addr = $crate::hooks::translate_address($machine, $addr);
-        log::info!("Installing hook at {:#x}", addr);
-        $machine.add_function_hook(addr, |machine: &mut Machine| {
+        log::info!("Installing hook at {:#x}", $addr);
+        $machine.add_function_hook($addr, |machine: &mut Machine| {
             let cpu = machine.emu.x86.cpu_mut();
             let mem = machine.memory.mem();
             let esp = cpu.regs.get32(Register::ESP);
@@ -118,9 +90,8 @@ macro_rules! hook {
 
     // cdecl with two arguments
     ($machine:expr, $addr:expr, $func:path, cdecl, $arg1_type:ty, $arg2_type:ty) => {{
-        let addr = $crate::hooks::translate_address($machine, $addr);
-        log::info!("Installing hook at {:#x}", addr);
-        $machine.add_function_hook(addr, |machine: &mut Machine| {
+        log::info!("Installing hook at {:#x}", $addr);
+        $machine.add_function_hook($addr, |machine: &mut Machine| {
             let cpu = machine.emu.x86.cpu_mut();
             let mem = machine.memory.mem();
             let esp = cpu.regs.get32(Register::ESP);
