@@ -3877,6 +3877,30 @@ mod wrappers {
             result.into()
         }
     }
+    pub unsafe fn InterlockedExchangeAdd(sys: &mut dyn System, stack_args: u32) -> ABIReturn {
+        use kernel32::sync::interlocked::*;
+        unsafe {
+            let mem = sys.mem().detach();
+            let addend = <Option<&mut u32>>::from_stack(mem, stack_args + 0u32);
+            let value = <u32>::from_stack(mem, stack_args + 4u32);
+            let __trace_record = if trace::enabled("kernel32/sync/interlocked") {
+                trace::Record::new(
+                    kernel32::sync::interlocked::InterlockedExchangeAdd_pos,
+                    "kernel32/sync/interlocked",
+                    "InterlockedExchangeAdd",
+                    &[("addend", &addend), ("value", &value)],
+                )
+                .enter()
+            } else {
+                None
+            };
+            let result = kernel32::sync::interlocked::InterlockedExchangeAdd(sys, addend, value);
+            if let Some(mut __trace_record) = __trace_record {
+                __trace_record.exit(&result);
+            }
+            result.into()
+        }
+    }
     pub unsafe fn InterlockedIncrement(sys: &mut dyn System, stack_args: u32) -> ABIReturn {
         use kernel32::sync::interlocked::*;
         unsafe {
@@ -6890,7 +6914,7 @@ mod wrappers {
         }
     }
 }
-const SHIMS: [Shim; 249usize] = [
+const SHIMS: [Shim; 250usize] = [
     Shim {
         name: "AcquireSRWLockExclusive",
         func: Handler::Sync(wrappers::AcquireSRWLockExclusive),
@@ -7450,6 +7474,10 @@ const SHIMS: [Shim; 249usize] = [
     Shim {
         name: "InterlockedDecrement",
         func: Handler::Sync(wrappers::InterlockedDecrement),
+    },
+    Shim {
+        name: "InterlockedExchangeAdd",
+        func: Handler::Sync(wrappers::InterlockedExchangeAdd),
     },
     Shim {
         name: "InterlockedIncrement",

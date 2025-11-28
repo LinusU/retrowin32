@@ -28,3 +28,15 @@ pub fn InterlockedCompareExchange(
     }
     original
 }
+
+#[win32_derive::dllexport]
+pub fn InterlockedExchangeAdd(
+    sys: &dyn System,
+    addend: Option<&mut u32>,
+    value: u32,
+) -> u32 {
+    let addend = addend.unwrap();
+    let original = *addend;
+    *addend = addend.wrapping_add(value);
+    original
+}
