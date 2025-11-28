@@ -174,6 +174,18 @@ macro_rules! hook {
     }};
 }
 
+macro_rules! assert_unused {
+    ($machine:expr, $addr:expr, $func:expr) => {
+        $machine.add_function_hook($addr, |_| {
+            panic!(
+                "Function {} at address {:x} called unexpectedly",
+                stringify!($func),
+                $addr
+            );
+        });
+    };
+}
+
 /// Install all Deimos Rising game-specific hooks
 #[rustfmt::skip]
 pub fn install_hooks(machine: &mut Machine) {
@@ -196,4 +208,10 @@ pub fn install_hooks(machine: &mut Machine) {
         tag.unwrap().get_info_from_file_name(name.unwrap())
     }
     hook!(machine, 0x004038b0, pak_tag_get_info_from_file_name, cdecl, Option<&str>, Option<&mut game::pak::Tag>);
+
+    assert_unused!(machine, 0x0046c380, allocate_from_fixed_pools);
+    assert_unused!(machine, 0x0046c5d0, ___pool_alloc);
+    assert_unused!(machine, 0x0046c620, ___pool_free);
+    assert_unused!(machine, 0x0046c880, ___pool_free_all);
+    assert_unused!(machine, 0x0046c670, ___pool_realloc);
 }
