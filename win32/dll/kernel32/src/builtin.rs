@@ -4991,6 +4991,29 @@ mod wrappers {
             result.into()
         }
     }
+    pub unsafe fn ReleaseMutex(sys: &mut dyn System, stack_args: u32) -> ABIReturn {
+        use kernel32::sync::mutex::*;
+        unsafe {
+            let mem = sys.mem().detach();
+            let hMutex = <HANDLE<()>>::from_stack(mem, stack_args + 0u32);
+            let __trace_record = if trace::enabled("kernel32/sync/mutex") {
+                trace::Record::new(
+                    kernel32::sync::mutex::ReleaseMutex_pos,
+                    "kernel32/sync/mutex",
+                    "ReleaseMutex",
+                    &[("hMutex", &hMutex)],
+                )
+                .enter()
+            } else {
+                None
+            };
+            let result = kernel32::sync::mutex::ReleaseMutex(sys, hMutex);
+            if let Some(mut __trace_record) = __trace_record {
+                __trace_record.exit(&result);
+            }
+            result.into()
+        }
+    }
     pub unsafe fn ReleaseSRWLockExclusive(sys: &mut dyn System, stack_args: u32) -> ABIReturn {
         use kernel32::sync::srw_lock::*;
         unsafe {
@@ -6914,7 +6937,7 @@ mod wrappers {
         }
     }
 }
-const SHIMS: [Shim; 250usize] = [
+const SHIMS: [Shim; 251usize] = [
     Shim {
         name: "AcquireSRWLockExclusive",
         func: Handler::Sync(wrappers::AcquireSRWLockExclusive),
@@ -7630,6 +7653,10 @@ const SHIMS: [Shim; 250usize] = [
     Shim {
         name: "ReadFile",
         func: Handler::Sync(wrappers::ReadFile),
+    },
+    Shim {
+        name: "ReleaseMutex",
+        func: Handler::Sync(wrappers::ReleaseMutex),
     },
     Shim {
         name: "ReleaseSRWLockExclusive",

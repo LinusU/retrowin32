@@ -1,13 +1,14 @@
 use super::{HEVENT, Thread, command_line, init::init_peb, loader::Module};
 use crate::loader;
 use std::{collections::HashMap, rc::Rc, sync::Arc};
-use win32_system::{Event, System, generic_get_state, memory::Memory};
+use win32_system::{Event, Mutex, System, generic_get_state, memory::Memory};
 use win32_winapi::{HANDLE, HMODULE, Handles};
 
 /// Objects identified by kernel handles, all of which can be passed to Wait* functions.
 pub enum KernelObject {
     Event(Arc<Event>),
     Thread(Rc<Thread>),
+    Mutex(Arc<Mutex>),
 }
 
 impl Clone for KernelObject {
@@ -15,6 +16,7 @@ impl Clone for KernelObject {
         match self {
             KernelObject::Event(ev) => KernelObject::Event(ev.clone()),
             KernelObject::Thread(th) => KernelObject::Thread(th.clone()),
+            KernelObject::Mutex(mx) => KernelObject::Mutex(mx.clone()),
         }
     }
 }
