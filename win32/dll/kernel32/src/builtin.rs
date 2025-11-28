@@ -3820,6 +3820,40 @@ mod wrappers {
             result.into()
         }
     }
+    pub unsafe fn InterlockedCompareExchange(sys: &mut dyn System, stack_args: u32) -> ABIReturn {
+        use kernel32::sync::interlocked::*;
+        unsafe {
+            let mem = sys.mem().detach();
+            let destination = <Option<&mut u32>>::from_stack(mem, stack_args + 0u32);
+            let exchange = <u32>::from_stack(mem, stack_args + 4u32);
+            let comparand = <u32>::from_stack(mem, stack_args + 8u32);
+            let __trace_record = if trace::enabled("kernel32/sync/interlocked") {
+                trace::Record::new(
+                    kernel32::sync::interlocked::InterlockedCompareExchange_pos,
+                    "kernel32/sync/interlocked",
+                    "InterlockedCompareExchange",
+                    &[
+                        ("destination", &destination),
+                        ("exchange", &exchange),
+                        ("comparand", &comparand),
+                    ],
+                )
+                .enter()
+            } else {
+                None
+            };
+            let result = kernel32::sync::interlocked::InterlockedCompareExchange(
+                sys,
+                destination,
+                exchange,
+                comparand,
+            );
+            if let Some(mut __trace_record) = __trace_record {
+                __trace_record.exit(&result);
+            }
+            result.into()
+        }
+    }
     pub unsafe fn InterlockedDecrement(sys: &mut dyn System, stack_args: u32) -> ABIReturn {
         use kernel32::sync::interlocked::*;
         unsafe {
@@ -6856,7 +6890,7 @@ mod wrappers {
         }
     }
 }
-const SHIMS: [Shim; 248usize] = [
+const SHIMS: [Shim; 249usize] = [
     Shim {
         name: "AcquireSRWLockExclusive",
         func: Handler::Sync(wrappers::AcquireSRWLockExclusive),
@@ -7408,6 +7442,10 @@ const SHIMS: [Shim; 248usize] = [
     Shim {
         name: "InitializeSListHead",
         func: Handler::Sync(wrappers::InitializeSListHead),
+    },
+    Shim {
+        name: "InterlockedCompareExchange",
+        func: Handler::Sync(wrappers::InterlockedCompareExchange),
     },
     Shim {
         name: "InterlockedDecrement",

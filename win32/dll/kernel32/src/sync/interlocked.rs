@@ -13,3 +13,18 @@ pub fn InterlockedDecrement(sys: &dyn System, addend: Option<&mut u32>) -> u32 {
     *addend -= 1;
     *addend
 }
+
+#[win32_derive::dllexport]
+pub fn InterlockedCompareExchange(
+    sys: &dyn System,
+    destination: Option<&mut u32>,
+    exchange: u32,
+    comparand: u32,
+) -> u32 {
+    let destination = destination.unwrap();
+    let original = *destination;
+    if original == comparand {
+        *destination = exchange;
+    }
+    original
+}
