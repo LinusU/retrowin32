@@ -5,7 +5,7 @@
 use builtin_kernel32 as kernel32;
 use win32_system::dll::{BuiltinDLL, DLLResolution};
 
-pub const DLLS: [BuiltinDLL; 19] = [
+pub const DLLS: [BuiltinDLL; 20] = [
     builtin_advapi32::DLL,
     builtin_bass::DLL,
     builtin_comctl32::DLL,
@@ -17,6 +17,7 @@ pub const DLLS: [BuiltinDLL; 19] = [
     builtin_ntdll::DLL,
     builtin_ole32::DLL,
     builtin_oleaut32::DLL,
+    builtin_shell32::DLL,
     builtin_shlwapi::DLL,
     builtin_ucrtbase::DLL,
     builtin_user32::DLL,

@@ -79,6 +79,7 @@ fn build_dlls(b: &B) -> anyhow::Result<()> {
         "ole32",
         "oleaut32",
         "retrowin32_test",
+        "shell32",
         "shlwapi",
         "ucrtbase",
         "vcruntime140",

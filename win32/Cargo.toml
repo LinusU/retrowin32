@@ -21,6 +21,7 @@ builtin-ntdll = { path = "dll/ntdll" }
 builtin-ole32 = { path = "dll/ole32" }
 builtin-oleaut32 = { path = "dll/oleaut32" }
 builtin-retrowin32_test = { path = "dll/retrowin32_test" }
+builtin-shell32 = { path = "dll/shell32" }
 builtin-shlwapi = { path = "dll/shlwapi" }
 builtin-ucrtbase = { path = "dll/ucrtbase" }
 builtin-user32 = { path = "dll/user32" }
